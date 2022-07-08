@@ -1,183 +1,155 @@
-local lplr = game.Players.LocalPlayer
-local camera = game:GetService("Workspace").CurrentCamera
-local CurrentCamera = workspace.CurrentCamera
-local worldToViewportPoint = CurrentCamera.worldToViewportPoint
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+local Player = game:GetService("Players").LocalPlayer
+local Camera = game:GetService("Workspace").CurrentCamera
+local UserInputService = game:GetService("UserInputService")
 
-local HeadOff = Vector3.new(0, 0.5, 0)
-local LegOff = Vector3.new(0,3,0)
-
-for i,v in pairs(game.Players:GetChildren()) do
-    local BoxOutline = Drawing.new("Square")
-    BoxOutline.Visible = false
-    BoxOutline.Color = Color3.new(0,0,0)
-    BoxOutline.Thickness = 3
-    BoxOutline.Transparency = 1
-    BoxOutline.Filled = false
-
-    local Box = Drawing.new("Square")
-    Box.Visible = false
-    Box.Color = Color3.new(1,1,1)
-    Box.Thickness = 1
-    Box.Transparency = 1
-    Box.Filled = false
-
-    local HealthBarOutline = Drawing.new("Square")
-    HealthBarOutline.Thickness = 3
-    HealthBarOutline.Filled = false
-    HealthBarOutline.Color = Color3.new(0,0,0)
-    HealthBarOutline.Transparency = 1
-    HealthBarOutline.Visible = false
-
-    local HealthBar = Drawing.new("Square")
-    HealthBar.Thickness = 1
-    HealthBar.Filled = false
-    HealthBar.Transparency = 1
-    HealthBar.Visible = false
-
-    function boxesp()
-        game:GetService("RunService").RenderStepped:Connect(function()
-            if v.Character ~= nil and v.Character:FindFirstChild("Humanoid") ~= nil and v.Character:FindFirstChild("HumanoidRootPart") ~= nil and v ~= lplr and v.Character.Humanoid.Health > 0 then
-                local Vector, onScreen = camera:worldToViewportPoint(v.Character.HumanoidRootPart.Position)
-
-                local RootPart = v.Character.HumanoidRootPart
-                local Head = v.Character.Head
-                local RootPosition, RootVis = worldToViewportPoint(CurrentCamera, RootPart.Position)
-                local HeadPosition = worldToViewportPoint(CurrentCamera, Head.Position + HeadOff)
-                local LegPosition = worldToViewportPoint(CurrentCamera, RootPart.Position - LegOff)
-
-                if onScreen then
-                    BoxOutline.Size = Vector2.new(1000 / RootPosition.Z, HeadPosition.Y - LegPosition.Y)
-                    BoxOutline.Position = Vector2.new(RootPosition.X - BoxOutline.Size.X / 2, RootPosition.Y - BoxOutline.Size.Y / 2)
-                    BoxOutline.Visible = true
-
-                    Box.Size = Vector2.new(1000 / RootPosition.Z, HeadPosition.Y - LegPosition.Y)
-                    Box.Position = Vector2.new(RootPosition.X - Box.Size.X / 2, RootPosition.Y - Box.Size.Y / 2)
-                    Box.Visible = true
-
-                    HealthBarOutline.Size = Vector2.new(2, HeadPosition.Y - LegPosition.Y)
-                    HealthBarOutline.Position = BoxOutline.Position - Vector2.new(6,0)
-                    HealthBarOutline.Visible = true
-
-                    HealthBar.Size = Vector2.new(2, (HeadPosition.Y - LegPosition.Y) / (game:GetService("Players")[v.Character.Name].NRPBS["MaxHealth"].Value / math.clamp(game:GetService("Players")[v.Character.Name].NRPBS["Health"].Value, 0, game:GetService("Players")[v.Character.Name].NRPBS:WaitForChild("MaxHealth").Value)))
-                    HealthBar.Position = Vector2.new(Box.Position.X - 6, Box.Position.Y + (1 / HealthBar.Size.Y))
-                    HealthBar.Color = Color3.fromRGB(255 - 255 / (game:GetService("Players")[v.Character.Name].NRPBS["MaxHealth"].Value / game:GetService("Players")[v.Character.Name].NRPBS["Health"].Value), 255 / (game:GetService("Players")[v.Character.Name].NRPBS["MaxHealth"].Value / game:GetService("Players")[v.Character.Name].NRPBS["Health"].Value), 0)
-                    HealthBar.Visible = true
-
-                    if v.TeamColor == lplr.TeamColor then
-                        --- Our Team
-                        BoxOutline.Visible = false
-                        Box.Visible = false
-                        HealthBarOutline.Visible = false
-                        HealthBar.Visible = false
-                    else
-                        ---Enemy Team
-                        BoxOutline.Visible = true
-                        Box.Visible = true
-                        HealthBarOutline.Visible = true
-                        HealthBar.Visible = true
-                    end
-
-                else
-                    BoxOutline.Visible = false
-                    Box.Visible = false
-                    HealthBarOutline.Visible = false
-                    HealthBar.Visible = false
-                end
-            else
-                BoxOutline.Visible = false
-                Box.Visible = false
-                HealthBarOutline.Visible = false
-                HealthBar.Visible = false
-            end
-        end)
-    end
-    coroutine.wrap(boxesp)()
+getgenv().useTeamColor = false
+local FontValue = 1
+if not getgenv().Visibility then
+    getgenv().Visibility = false
 end
 
-game.Players.PlayerAdded:Connect(function(v)
-    local BoxOutline = Drawing.new("Square")
-    BoxOutline.Visible = false
-    BoxOutline.Color = Color3.new(0,0,0)
-    BoxOutline.Thickness = 3
-    BoxOutline.Transparency = 1
-    BoxOutline.Filled = false
+if not getgenv().cham or getgenv().nameESP or getgenv().boxESP then
+    getgenv().cham = false
+    getgenv().nameESP = false
+    getgenv().boxESP = false
+end
 
-    local Box = Drawing.new("Square")
+
+local function CycleFont()
+    if FontValue + 1 > 3 then
+       FontValue = 1
+    else
+        FontValue = FontValue + 1
+    end
+end
+
+
+local function GetPartCorners(Part)
+    local Size = Part.Size * Vector3.new(1, 1.5)
+    return {
+        TR = (Part.CFrame * CFrame.new(-Size.X, -Size.Y, 0)).Position,
+        BR = (Part.CFrame * CFrame.new(-Size.X, Size.Y, 0)).Position,
+        TL = (Part.CFrame * CFrame.new(Size.X, -Size.Y, 0)).Position,
+        BL = (Part.CFrame * CFrame.new(Size.X, Size.Y, 0)).Position,
+    }
+end
+
+local function DrawESP(plr)
+    local Name = Drawing.new("Text")
+    Name.Center = true
+    Name.Visible = false
+    Name.Outline = true
+    Name.Transparency = 1
+    local Box = Drawing.new("Quad")
     Box.Visible = false
-    Box.Color = Color3.new(1,1,1)
-    Box.Thickness = 1
+    Box.PointA = Vector2.new(0, 0)
+    Box.PointB = Vector2.new(0, 0)
+    Box.PointC = Vector2.new(0, 0)
+    Box.PointD = Vector2.new(0, 0)
+    Box.Color = Color3.fromRGB(255, 255, 255)
+    Box.Thickness = 2
     Box.Transparency = 1
-    Box.Filled = false
+    local highlight = Instance.new("Highlight")
+    
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Enabled = getgenv().cham
+    local function Update()
+        local c
+        c = game:GetService("RunService").RenderStepped:Connect(function()
+            if plr.Character ~= nil and plr.Character:FindFirstChildOfClass("Humanoid") ~= nil and plr.Character:FindFirstChild("HumanoidRootPart") ~= nil and plr.Character:FindFirstChildOfClass("Humanoid").Health > 0 and plr.Character:FindFirstChild("Head") ~= nil then
+                local Distance = (Camera.CFrame.Position - plr.Character.HumanoidRootPart.Position).Magnitude
+                local Vector, OnScreen = Camera:WorldToScreenPoint(plr.Character.Head.Position)
 
-    local HealthBarOutline = Drawing.new("Square")
-    HealthBarOutline.Thickness = 3
-    HealthBarOutline.Filled = false
-    HealthBarOutline.Color = Color3.new(0,0,0)
-    HealthBarOutline.Transparency = 1
-    HealthBarOutline.Visible = false
 
-    local HealthBar = Drawing.new("Square")
-    HealthBar.Thickness = 1
-    HealthBar.Filled = false
-    HealthBar.Transparency = 1
-    HealthBar.Visible = false
 
-    function boxesp()
-        game:GetService("RunService").RenderStepped:Connect(function()
-            if v.Character ~= nil and v.Character:FindFirstChild("Humanoid") ~= nil and v.Character:FindFirstChild("HumanoidRootPart") ~= nil and v ~= lplr and v.Character.Humanoid.Health > 0 then
-                local Vector, onScreen = camera:worldToViewportPoint(v.Character.HumanoidRootPart.Position)
-
-                local RootPart = v.Character.HumanoidRootPart
-                local Head = v.Character.Head
-                local RootPosition, RootVis = worldToViewportPoint(CurrentCamera, RootPart.Position)
-                local HeadPosition = worldToViewportPoint(CurrentCamera, Head.Position + HeadOff)
-                local LegPosition = worldToViewportPoint(CurrentCamera, RootPart.Position - LegOff)
-
-                if onScreen then
-                    BoxOutline.Size = Vector2.new(1000 / RootPosition.Z, HeadPosition.Y - LegPosition.Y)
-                    BoxOutline.Position = Vector2.new(RootPosition.X - BoxOutline.Size.X / 2, RootPosition.Y - BoxOutline.Size.Y / 2)
-                    BoxOutline.Visible = true
-
-                    Box.Size = Vector2.new(1000 / RootPosition.Z, HeadPosition.Y - LegPosition.Y)
-                    Box.Position = Vector2.new(RootPosition.X - Box.Size.X / 2, RootPosition.Y - Box.Size.Y / 2)
-                    Box.Visible = true
-
-                    HealthBarOutline.Size = Vector2.new(2, HeadPosition.Y - LegPosition.Y)
-                    HealthBarOutline.Position = BoxOutline.Position - Vector2.new(6,0)
-                    HealthBarOutline.Visible = true
-
-                    HealthBar.Size = Vector2.new(2, (HeadPosition.Y - LegPosition.Y) / (game:GetService("Players")[v.Character.Name].NRPBS["MaxHealth"].Value / math.clamp(game:GetService("Players")[v.Character.Name].NRPBS["Health"].Value, 0, game:GetService("Players")[v.Character.Name].NRPBS:WaitForChild("MaxHealth").Value)))
-                    HealthBar.Position = Vector2.new(Box.Position.X - 6, Box.Position.Y + (1/HealthBar.Size.Y))
-		    HealthBar.Color = Color3.fromRGB(255 - 255 / (game:GetService("Players")[v.Character.Name].NRPBS["MaxHealth"].Value / game:GetService("Players")[v.Character.Name].NRPBS["Health"].Value), 255 / (game:GetService("Players")[v.Character.Name].NRPBS["MaxHealth"].Value / game:GetService("Players")[v.Character.Name].NRPBS["Health"].Value), 0)                    
-		    HealthBar.Visible = true
-
-                    if v.TeamColor == lplr.TeamColor then
-                        --- Our Team
-                        BoxOutline.Visible = false
-                        Box.Visible = false
-                        HealthBarOutline.Visible = false
-                        HealthBar.Visible = false
-                    else
-                        ---Enemy Team
-                        BoxOutline.Visible = true
-                        Box.Visible = true
-                        HealthBarOutline.Visible = true
-                        HealthBar.Visible = true
-                    end
-
+                highlight.Parent = plr.Character
+                if getgenv().Visibility then
+                    highlight.Enabled = getgenv().cham
+                end
+                if getgenv().useTeamColor then
+                    highlight.FillColor = plr.TeamColor.Color
                 else
-                    BoxOutline.Visible = false
+                    highlight.FillColor = Color3.fromHSV(math.clamp(Distance / 5, 0, 125) / 255, 0.75, 1)
+                end
+
+
+
+                if OnScreen and getgenv().Visibility and getgenv().nameESP then
+                    Name.Position = Vector2.new(Vector.X, Vector.Y + math.clamp(Distance / 10, 10, 30) - 10)
+                    Name.Size = math.clamp(30 - Distance / 10, 15, 30)
+                    if getgenv().useTeamColor then
+                        Name.Color = plr.TeamColor.Color
+                    else
+                        Name.Color = Color3.fromHSV(math.clamp(Distance / 5, 0, 125) / 255, 0.75, 1)
+                    end
+                    Name.Visible = true
+                    Name.Font = FontValue
+                    --Name.Transparency = math.clamp((500 - Distance) / 200, 0.2, 1)
+                else
+                    Name.Visible = false 
+                end
+                
+                Name.Text = string.format(plr.Name.." ["..tostring(math.floor(Distance*0.28)).."m]")
+                 
+                local PartCorners = GetPartCorners(plr.Character.HumanoidRootPart)
+                local VectorTR, OnScreenTR = Camera:WorldToScreenPoint(PartCorners.TR)
+                local VectorBR, OnScreenBR = Camera:WorldToScreenPoint(PartCorners.BR)
+                local VectorTL, OnScreenTL = Camera:WorldToScreenPoint(PartCorners.TL)
+                local VectorBL, OnScreenBL = Camera:WorldToScreenPoint(PartCorners.BL)
+          
+                if (OnScreenBL or OnScreenTL or OnScreenBR or OnScreenTR) and getgenv().Visibility and getgenv().boxESP then
+                    Box.PointA = Vector2.new(VectorTR.X, VectorTR.Y + 36)
+                    Box.PointB = Vector2.new(VectorTL.X, VectorTL.Y + 36)
+                    Box.PointC = Vector2.new(VectorBL.X, VectorBL.Y + 36)
+                    Box.PointD = Vector2.new(VectorBR.X, VectorBR.Y + 36)
+                    if getgenv().useTeamColor then
+                        Box.Color = plr.TeamColor.Color
+                    else
+                        Box.Color = Color3.fromHSV(math.clamp(Distance / 5, 0, 125) / 255, 0.75, 1)
+                    end
+                    
+                    Box.Thickness = math.clamp(3 - (Distance / 100), 0, 3)
+                    --Box.Transparency = math.clamp((500 - Distance) / 200, 0.2, 1)
+                    Box.Visible = true
+                else
                     Box.Visible = false
-                    HealthBarOutline.Visible = false
-                    HealthBar.Visible = false
                 end
             else
-                BoxOutline.Visible = false
                 Box.Visible = false
-                HealthBarOutline.Visible = false
-                HealthBar.Visible = false
+                Name.Visible = false
+                highlight.Enabled = false
+                if game.Players:FindFirstChild(plr.Name) == nil then
+                    c:Disconnect()
+                end
             end
         end)
     end
-    coroutine.wrap(boxesp)()
+    coroutine.wrap(Update)()
+end
+
+for _,v in pairs(game:GetService("Players"):GetChildren()) do
+    if v.Name ~= Player.Name then
+        DrawESP(v)
+    end
+end
+
+game:GetService("Players").PlayerAdded:Connect(function(v)
+    DrawESP(v)
+end)
+
+
+UserInputService.InputBegan:Connect(function(Input, GP)
+    if not GP and Input.KeyCode == Enum.KeyCode.Delete then
+        getgenv().Visibility = not getgenv().Visibility
+    end 
+    
+    if not GP and Input.KeyCode == Enum.KeyCode.End then
+        CycleFont()
+    end
+    if not GP and Input.KeyCode == Enum.KeyCode.Home then
+        getgenv().useTeamColor = not getgenv().useTeamColor
+    end
 end)
